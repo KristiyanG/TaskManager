@@ -1,8 +1,8 @@
-package core;
+package core.action;
 
 import java.util.List;
 
-import core.Constants.ActionType;
+import core.action.Constants.ActionType;
 
 public class AvailableTask implements Action {
 

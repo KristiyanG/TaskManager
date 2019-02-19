@@ -1,6 +1,6 @@
-package core;
+package core.action;
 
-import core.Constants.ActionType;
+import core.action.Constants.ActionType;
 
 public class CreateTask implements Action {
 	/**

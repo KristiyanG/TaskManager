@@ -1,8 +1,8 @@
-package core;
+package core.action;
 
 import java.io.Serializable;
 
-import core.Constants.ActionType;
+import core.action.Constants.ActionType;
 
 public interface Action extends Serializable {
 	

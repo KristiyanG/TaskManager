@@ -1,8 +1,8 @@
-package core;
+package core.action;
 
 import java.io.Serializable;
 
-import core.Constants.Status;
+import core.action.Constants.Status;
 
 public class Task implements Serializable{
 	/**

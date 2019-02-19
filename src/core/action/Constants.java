@@ -1,4 +1,4 @@
-package core;
+package core.action;
 
 public class Constants {
 	
@@ -9,6 +9,6 @@ public class Constants {
 	}
 	
 	public enum ActionType {
-		GET_TASK, CREATE_TASK,DELETE_TASK,COMPLETE_TASK, AVAILABLE_TASKS
+		GET_TASK, CREATE_TASK,DELETE_TASK,COMPLETE_TASK, AVAILABLE_TASKS, LOGIN
 	}
 }
