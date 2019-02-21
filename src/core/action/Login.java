@@ -23,4 +23,9 @@ public class Login implements Action{
 		return ActionType.LOGIN;
 	}
 
+	@Override
+	public String getClientName() {
+		return client.getName();
+	}
+
 }

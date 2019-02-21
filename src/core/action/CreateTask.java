@@ -19,4 +19,10 @@ public class CreateTask implements Action {
 		return ActionType.CREATE_TASK;
 	}
 
+	@Override
+	public String getClientName() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

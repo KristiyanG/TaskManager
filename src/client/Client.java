@@ -1,17 +1,12 @@
 package client;
 
-import java.awt.Dimension;
-import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.FlowLayout;
-import java.awt.Frame;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.io.StreamCorruptedException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -19,58 +14,98 @@ import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 
 import core.action.Action;
 import core.action.AvailableTask;
 import core.action.CompleteTask;
 import core.action.Constants;
 import core.action.GetTask;
+import core.action.Login;
 import core.action.Task;
-
-import javax.swing.JScrollPane;
+import core.action.Constants.ActionType;
 
 public class Client implements Serializable {
-	
+
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -3195074717605829379L;
 
 	private String name;
-	
+
 	public String getName() {
 		return name;
 	}
-	
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	private Task task;
-
-	private boolean toClose;
 
 	private static JFrame frame = new JFrame();
 
-	private static Socket clientSocket;
-
-	public static void main(String[] args) throws Exception {
-		InetAddress host = InetAddress.getLocalHost();
-		clientSocket = new Socket(host.getHostName(), Constants.PORT);
-		ClientGUI application = new ClientGUI(clientSocket);
-		application.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		application.init();
-		application.showAvailableTasks(getAvailableTask());
-		application.waitForMessage();
+	private transient Socket clientSocket;
+	
+	public Client() {
+		InetAddress host;
+		try {
+			host = InetAddress.getLocalHost();
+			clientSocket = new Socket(host.getHostName(), Constants.PORT);
+			clientSocket.setKeepAlive(true);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
-	private static void showAvailableTasks(AvailableTask avTasks) {
-//		frame.removeAll();
-//		frame = new JFrame();
+	public static void main(String[] args) throws Exception {
+		frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		Client application = new Client();
+		application.init();
+		while (true) {
+			try {
+				ObjectInputStream ois = new ObjectInputStream(application.clientSocket.getInputStream());
+				Action action = (Action) ois.readObject();
+				if (action != null && action.getAction().equals(ActionType.AVAILABLE_TASKS)) {
+					ois = new ObjectInputStream(application.clientSocket.getInputStream());
+					AvailableTask tasks = (AvailableTask) ois.readObject();
+					System.out.println("Message: " + tasks.getTasks());
+					application.showAvailableTasks(tasks);
+				}
+			} catch (StreamCorruptedException e) {
+				System.err.println("Ex in client " + application.getName() + ". Ex : " + e.getMessage());
+			}
+
+		}
+	}
+
+	public void init() {
+		try {
+
+			do {
+				name = JOptionPane.showInputDialog("Please enter your name");
+			} while ((name == null) || (name.length() == 0));
+			InetAddress addr = InetAddress.getLocalHost();
+			System.out.println("addr = " + addr);
+			System.out.println("socket = " + clientSocket);
+			Login login = new Login(this);
+			ObjectOutputStream oos = null;
+			ObjectInputStream ois = null;
+			// establish socket connection to server
+			// write to socket using ObjectOutputStream
+			oos = new ObjectOutputStream(clientSocket.getOutputStream());
+			oos.writeObject(login);
+			System.out.println("Sending request to Socket Server");
+
+			// read the server response message
+			ois = new ObjectInputStream(clientSocket.getInputStream());
+			AvailableTask tasks = (AvailableTask) ois.readObject();
+			showAvailableTasks(tasks);
+		} catch (Exception e) {
+			System.out.println("exception: " + e);
+		}
+	}
+
+	private void showAvailableTasks(AvailableTask avTasks) {
 		List<Task> tasks = avTasks.getTasks();
 
 		String data[][] = new String[tasks.size()][];
@@ -87,8 +122,12 @@ public class Client implements Serializable {
 		jt.repaint();
 		jt.setBounds(30, 40, 200, 300);
 		JPanel sp = new JPanel();
+		JLabel jl = new JLabel("User:" + this.getName());
+		JLabel avUsersLabel = new JLabel("Available user:" + avTasks.getClients().size());
 		sp.removeAll();
+		sp.add(jl);
 		sp.add(jt);
+		sp.add(avUsersLabel);
 		JButton jb = new JButton("Get Task");
 		sp.add(jb);
 		jb.addActionListener(new ActionListener() {
@@ -110,8 +149,11 @@ public class Client implements Serializable {
 
 	}
 
-	public static void getTask(Task task2, int taskIndex) throws Exception {
-		GetTask getTaskAction = new GetTask();
+	public void getTask(Task task2, int taskIndex) throws Exception {
+
+		InetAddress host = InetAddress.getLocalHost();
+		clientSocket = new Socket(host.getHostName(), Constants.PORT);
+		GetTask getTaskAction = new GetTask(this);
 		getTaskAction.setTask(task2);
 		getTaskAction.setTaskIndex(taskIndex);
 		ObjectOutputStream oos = null;
@@ -134,10 +176,12 @@ public class Client implements Serializable {
 		completedTask(task2, taskIndex);
 	}
 
-	private static void completedTask(Task task2, int taskIndex) throws Exception {
-		// TODO Auto-generated method stub
+	private void completedTask(Task task2, int taskIndex) throws Exception {
+
+		InetAddress host = InetAddress.getLocalHost();
 		Thread.sleep(task2.getDuration());
-		CompleteTask complTask = new CompleteTask(task2, taskIndex);
+		clientSocket = new Socket(host.getHostName(), Constants.PORT);
+		CompleteTask complTask = new CompleteTask(task2, taskIndex,this);
 		ObjectOutputStream oos = null;
 		ObjectInputStream ois = null;
 		// establish socket connection to server
@@ -156,24 +200,5 @@ public class Client implements Serializable {
 		ois.close();
 		oos.close();
 	}
-	
-	private static AvailableTask getAvailableTask() throws Exception {
-		AvailableTask avTasks = new AvailableTask(null);
-		ObjectOutputStream oos = null;
-		ObjectInputStream ois = null;
-		// establish socket connection to server
-		// write to socket using ObjectOutputStream
-		oos = new ObjectOutputStream(clientSocket.getOutputStream());
-		oos.writeObject(avTasks);
-		System.out.println("Sending request to Socket Server");
 
-		// read the server response message
-		ois = new ObjectInputStream(clientSocket.getInputStream());
-		AvailableTask tasks = (AvailableTask) ois.readObject();
-		System.out.println("Message: " + tasks.getTasks());
-		return tasks;
-
-	}
-	
-    
 }
