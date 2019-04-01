@@ -46,7 +46,7 @@ public class Server {
 		while (true) {
 			System.out.println("Waiting for client request");
 			Socket socket = server.accept();
-
+			socket.setKeepAlive(true);
 			// read from socket to ObjectInputStream object
 			clientRequest(socket);
 		}
@@ -65,7 +65,7 @@ public class Server {
 			serverTask.setStatus(Status.IN_PROGRESS);
 			System.out.println("Object Received: " + task.getTitle() + " from " + clientName);
 			// create ObjectOutputStream object
-			updateClients(clientName);
+//			updateClients(clientName);
 			returnAvailableTasks(socket);
 		} else if (action.getAction().equals(ActionType.COMPLETE_TASK)) {
 			CompleteTask complTask = (CompleteTask) action;
@@ -73,7 +73,8 @@ public class Server {
 			// create ObjectOutputStream object
 //				 write object to Socket
 			complTask.getTask().setStatus(Status.COMPLETED);		// close resources
-			tasks.get(complTask.getTaskIndex()).setStatus(Status.COMPLETED);
+//			tasks.get(complTask.getTaskIndex()).setStatus(Status.COMPLETED);
+			tasks.remove(complTask.getTaskIndex());
 			updateClients(clientName);
 			returnAvailableTasks(socket);
 		} else if (action.getAction().equals(ActionType.LOGIN)) {
@@ -111,9 +112,10 @@ public class Server {
 				continue;
 			}
 			try {
+//				new UpdateThread(entry.getValue()).start();
 				returnAvailableTasks(entry.getValue());
 				System.out.println(entry.getKey() + " was updated.");
-			} catch (IOException e) {
+			} catch (Exception e) {
 				System.out.println("Can not update client  : " + entry.getKey() + ". Reason : "  + e.getMessage());
 				e.printStackTrace();
 			}
@@ -126,5 +128,30 @@ public class Server {
 			tasks.add(task);
 		}
 
+	}
+	
+	static class UpdateThread extends Thread {
+		Socket socket;
+		public UpdateThread(Socket s) {
+			this.socket = s;
+		}
+		@Override
+		public void run() {
+			try {
+				returnAvailableTasks(socket);
+			} catch (IOException e) {
+				if(socket.isConnected()) {
+					System.out.println("SOcket is connected !!!");
+				}
+				System.out.println("Exception in socket - " + socket.getInetAddress().toString());
+				e.printStackTrace();
+			}
+		}
+		
+		private void returnAvailableTasks(Socket socket) throws IOException {
+			AvailableTask avTasks = new AvailableTask(new ArrayList<Task>(tasks),new ArrayList<String>(sockets.keySet()));
+			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+			oos.writeObject(avTasks);		// close resources
+		}
 	}
 }

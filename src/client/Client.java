@@ -42,9 +42,13 @@ public class Client implements Serializable {
 		return name;
 	}
 
-	private static JFrame frame = new JFrame();
+	private transient JFrame frame = new JFrame();
+	
+	private transient JTable jt;
 
 	private transient Socket clientSocket;
+
+	private transient JPanel sp;
 	
 	public Client() {
 		InetAddress host;
@@ -58,19 +62,19 @@ public class Client implements Serializable {
 	}
 
 	public static void main(String[] args) throws Exception {
-		frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		
 		Client application = new Client();
 		application.init();
 		while (true) {
 			try {
 				ObjectInputStream ois = new ObjectInputStream(application.clientSocket.getInputStream());
 				Action action = (Action) ois.readObject();
-				if (action != null && action.getAction().equals(ActionType.AVAILABLE_TASKS)) {
+//				if (action != null && action.getAction().equals(ActionType.AVAILABLE_TASKS)) {
 					ois = new ObjectInputStream(application.clientSocket.getInputStream());
 					AvailableTask tasks = (AvailableTask) ois.readObject();
 					System.out.println("Message: " + tasks.getTasks());
 					application.showAvailableTasks(tasks);
-				}
+//				}
 			} catch (StreamCorruptedException e) {
 				System.err.println("Ex in client " + application.getName() + ". Ex : " + e.getMessage());
 			}
@@ -79,6 +83,7 @@ public class Client implements Serializable {
 	}
 
 	public void init() {
+		frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		try {
 
 			do {
@@ -106,6 +111,13 @@ public class Client implements Serializable {
 	}
 
 	private void showAvailableTasks(AvailableTask avTasks) {
+//		frame = new JFrame();
+		if(jt!=null) {
+			frame.remove(sp);
+			frame.remove(jt);
+			frame.repaint();
+		}
+		sp = new JPanel();
 		List<Task> tasks = avTasks.getTasks();
 
 		String data[][] = new String[tasks.size()][];
@@ -116,12 +128,12 @@ public class Client implements Serializable {
 			data[i] = arr;
 		}
 
+		
 		String column[] = { "DURATION", "TITLE", "STATUS" };
-		JTable jt = new JTable(data, column);
+		jt = new JTable(data, column);
 		jt.invalidate();
 		jt.repaint();
 		jt.setBounds(30, 40, 200, 300);
-		JPanel sp = new JPanel();
 		JLabel jl = new JLabel("User:" + this.getName());
 		JLabel avUsersLabel = new JLabel("Available user:" + avTasks.getClients().size());
 		sp.removeAll();
@@ -171,8 +183,6 @@ public class Client implements Serializable {
 		Thread.sleep(task2.getDuration());
 		System.out.println("Message: " + tasks.getTasks());
 		// close resources
-		ois.close();
-		oos.close();
 		completedTask(task2, taskIndex);
 	}
 
