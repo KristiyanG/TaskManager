@@ -12,6 +12,7 @@ public class AvailableTask implements Action {
 	private static final long serialVersionUID = -7818556928651125676L;
 	private List<Task> tasks;
 	private List<String> clients;
+	private String clientName;
 
 	public AvailableTask(List<Task> tasks, List<String> clients) {
 		this.tasks = tasks;
@@ -31,7 +32,11 @@ public class AvailableTask implements Action {
 	@Override
 	public String getClientName() {
 		// TODO Auto-generated method stub
-		return null;
+		return clientName;
+	}
+	
+	public void setClientName(String clientName) {
+		this.clientName = clientName;
 	}
 	
 	public List<String> getClients() {

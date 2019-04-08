@@ -15,6 +15,7 @@ import core.action.AvailableTask;
 import core.action.CompleteTask;
 import core.action.Constants;
 import core.action.CreateTask;
+import core.action.DeleteTask;
 import core.action.GetTask;
 import core.action.Login;
 import core.action.Task;
@@ -92,7 +93,15 @@ public class Server {
 			// create ObjectOutputStream object
 //				 write object to Socket
 			updateClients(clientName);
-//			returnAvailableTasks(socket);
+			returnAvailableTasks(socket);
+		} else if (action.getAction().equals(ActionType.DELETE_TASK)) {
+			DeleteTask login = (DeleteTask) action;
+			System.out.println("Delete task : " + login.getClientName());
+			tasks.remove(login.getTaskIndex());
+			// create ObjectOutputStream object
+//				 write object to Socket
+			updateClients(clientName);
+			returnAvailableTasks(socket);
 		} else if (action.getAction().equals(ActionType.AVAILABLE_TASKS)) {
 			updateClients(clientName);
 			returnAvailableTasks(socket);

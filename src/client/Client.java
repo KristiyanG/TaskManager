@@ -29,6 +29,7 @@ import core.action.Login;
 import core.action.Task;
 import core.action.Constants.ActionType;
 import core.action.CreateTask;
+import core.action.DeleteTask;
 
 public class Client implements Serializable {
 
@@ -72,6 +73,16 @@ public class Client implements Serializable {
 	private void listenForUpdate() throws IOException, ClassNotFoundException {
 		while (true) {
 			try {
+				InetAddress addr = InetAddress.getLocalHost();
+//			clientSocket = new Socket(addr.getHostName(), Constants.PORT);
+			System.out.println("addr = " + addr);
+			System.out.println("socket = " + clientSocket);
+			AvailableTask login = new AvailableTask(null, null);
+			login.setClientName(name);
+			ObjectOutputStream oos = null;
+			oos = new ObjectOutputStream(clientSocket.getOutputStream());
+			oos.writeObject(login);
+				
 				ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
 				Action action = (Action) ois.readObject();
 				// if (action != null &&
@@ -177,10 +188,44 @@ public class Client implements Serializable {
 
 			}
 		});
+		JButton updateTasks = new JButton("Delete Tasks");
+		sp.add(updateTasks);
+		updateTasks.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					deleteTask(tasks.get(jt.getSelectedRow()), jt.getSelectedRow());
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+
+			}
+		});
 		frame.add(sp);
 		frame.setSize(300, 400);
 		frame.setVisible(true);
 
+	}
+
+	protected void deleteTask(Task task, int taskIndex) throws IOException, ClassNotFoundException {
+
+		InetAddress host = InetAddress.getLocalHost();
+		clientSocket = new Socket(host.getHostName(), Constants.PORT);
+		DeleteTask getTaskAction = new DeleteTask(task,this);
+		getTaskAction.setTaskIndex(taskIndex);
+		ObjectOutputStream oos = null;
+		ObjectInputStream ois = null;
+		// establish socket connection to server
+		// write to socket using ObjectOutputStream
+		oos = new ObjectOutputStream(clientSocket.getOutputStream());
+		oos.writeObject(getTaskAction);
+		System.out.println("Sending request to Socket Server");
+
+		// read the server response message
+		ois = new ObjectInputStream(clientSocket.getInputStream());
+		AvailableTask tasks = (AvailableTask) ois.readObject();
+		showAvailableTasks(tasks);
 	}
 
 	protected void createTask() {
