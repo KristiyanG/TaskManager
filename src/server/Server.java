@@ -14,6 +14,7 @@ import core.action.Action;
 import core.action.AvailableTask;
 import core.action.CompleteTask;
 import core.action.Constants;
+import core.action.CreateTask;
 import core.action.GetTask;
 import core.action.Login;
 import core.action.Task;
@@ -83,8 +84,17 @@ public class Server {
 			// create ObjectOutputStream object
 //				 write object to Socket
 			returnAvailableTasks(socket);
+			updateClients(clientName);
+		}  else if (action.getAction().equals(ActionType.CREATE_TASK)) {
+			CreateTask login = (CreateTask) action;
+			System.out.println("Create task : " + login.getClientName());
+			addTask(login.getTask());
+			// create ObjectOutputStream object
+//				 write object to Socket
+			updateClients(clientName);
+//			returnAvailableTasks(socket);
 		} else if (action.getAction().equals(ActionType.AVAILABLE_TASKS)) {
-//			updateClients(clientName);
+			updateClients(clientName);
 			returnAvailableTasks(socket);
 		} else {
 			System.out.println("This action is not implemented, yet...: ");
@@ -99,20 +109,26 @@ public class Server {
 //		socket.close();
 	}
 
+	private static void addTask(Task task) {
+		if(task.getTitle().isEmpty()) {
+			task.setTitle("Task" + tasks.size()+1);
+		}
+		tasks.add(task);
+	}
+
 	private static void returnAvailableTasks(Socket socket) throws IOException {
 		AvailableTask avTasks = new AvailableTask(new ArrayList<Task>(tasks),new ArrayList<String>(sockets.keySet()));
 		ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 		oos.writeObject(avTasks);		// close resources
 	}
 	
-	public static synchronized void updateClients(String clientName) {
+	public static void updateClients(String clientName) {
 		for(java.util.Map.Entry<String, Socket> entry : sockets.entrySet()) {
 			if(entry.getKey().equals(clientName)) {
 				System.out.println("Skip client update.." + clientName);
 				continue;
 			}
 			try {
-//				new UpdateThread(entry.getValue()).start();
 				returnAvailableTasks(entry.getValue());
 				System.out.println(entry.getKey() + " was updated.");
 			} catch (Exception e) {
@@ -128,30 +144,5 @@ public class Server {
 			tasks.add(task);
 		}
 
-	}
-	
-	static class UpdateThread extends Thread {
-		Socket socket;
-		public UpdateThread(Socket s) {
-			this.socket = s;
-		}
-		@Override
-		public void run() {
-			try {
-				returnAvailableTasks(socket);
-			} catch (IOException e) {
-				if(socket.isConnected()) {
-					System.out.println("SOcket is connected !!!");
-				}
-				System.out.println("Exception in socket - " + socket.getInetAddress().toString());
-				e.printStackTrace();
-			}
-		}
-		
-		private void returnAvailableTasks(Socket socket) throws IOException {
-			AvailableTask avTasks = new AvailableTask(new ArrayList<Task>(tasks),new ArrayList<String>(sockets.keySet()));
-			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-			oos.writeObject(avTasks);		// close resources
-		}
 	}
 }

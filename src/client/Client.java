@@ -28,6 +28,7 @@ import core.action.GetTask;
 import core.action.Login;
 import core.action.Task;
 import core.action.Constants.ActionType;
+import core.action.CreateTask;
 
 public class Client implements Serializable {
 
@@ -43,40 +44,45 @@ public class Client implements Serializable {
 	}
 
 	private transient JFrame frame = new JFrame();
-	
+
 	private transient JTable jt;
 
 	private transient Socket clientSocket;
 
 	private transient JPanel sp;
-	
+
 	public Client() {
 		InetAddress host;
 		try {
-			host = InetAddress.getLocalHost();
-			clientSocket = new Socket(host.getHostName(), Constants.PORT);
-			clientSocket.setKeepAlive(true);
+//			host = InetAddress.getLocalHost();
+//			clientSocket = new Socket(host.getHostName(), Constants.PORT);
+//			clientSocket.setKeepAlive(true);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
 	public static void main(String[] args) throws Exception {
-		
+
 		Client application = new Client();
 		application.init();
+		application.listenForUpdate();
+	}
+
+	private void listenForUpdate() throws IOException, ClassNotFoundException {
 		while (true) {
 			try {
-				ObjectInputStream ois = new ObjectInputStream(application.clientSocket.getInputStream());
+				ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
 				Action action = (Action) ois.readObject();
-//				if (action != null && action.getAction().equals(ActionType.AVAILABLE_TASKS)) {
-					ois = new ObjectInputStream(application.clientSocket.getInputStream());
-					AvailableTask tasks = (AvailableTask) ois.readObject();
-					System.out.println("Message: " + tasks.getTasks());
-					application.showAvailableTasks(tasks);
-//				}
+				// if (action != null &&
+				// action.getAction().equals(ActionType.AVAILABLE_TASKS)) {
+				ois = new ObjectInputStream(clientSocket.getInputStream());
+				AvailableTask tasks = (AvailableTask) ois.readObject();
+				System.out.println("Message: " + tasks.getTasks());
+				showAvailableTasks(tasks);
+				// }
 			} catch (StreamCorruptedException e) {
-				System.err.println("Ex in client " + application.getName() + ". Ex : " + e.getMessage());
+				System.err.println("Ex in client " + getName() + ". Ex : " + e.getMessage());
 			}
 
 		}
@@ -89,6 +95,9 @@ public class Client implements Serializable {
 			do {
 				name = JOptionPane.showInputDialog("Please enter your name");
 			} while ((name == null) || (name.length() == 0));
+			InetAddress host = InetAddress.getLocalHost();
+			clientSocket = new Socket(host.getHostName(), Constants.PORT);
+			clientSocket.setKeepAlive(true);
 			InetAddress addr = InetAddress.getLocalHost();
 			System.out.println("addr = " + addr);
 			System.out.println("socket = " + clientSocket);
@@ -111,8 +120,8 @@ public class Client implements Serializable {
 	}
 
 	private void showAvailableTasks(AvailableTask avTasks) {
-//		frame = new JFrame();
-		if(jt!=null) {
+		// frame = new JFrame();
+		if (jt != null) {
 			frame.remove(sp);
 			frame.remove(jt);
 			frame.repaint();
@@ -128,7 +137,6 @@ public class Client implements Serializable {
 			data[i] = arr;
 		}
 
-		
 		String column[] = { "DURATION", "TITLE", "STATUS" };
 		jt = new JTable(data, column);
 		jt.invalidate();
@@ -155,10 +163,65 @@ public class Client implements Serializable {
 
 			}
 		});
+		JButton createTask = new JButton("Create Task");
+		sp.add(createTask);
+		createTask.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					createTask();
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+
+			}
+		});
 		frame.add(sp);
 		frame.setSize(300, 400);
 		frame.setVisible(true);
 
+	}
+
+	protected void createTask() {
+		String duration = "0";
+		do {
+			duration = JOptionPane.showInputDialog("Please enter task duration");
+		} while ((duration == null) || (!isInteger(duration)));
+		try {
+			InetAddress addr = InetAddress.getLocalHost();
+			clientSocket = new Socket(addr.getHostName(), Constants.PORT);
+			System.out.println("addr = " + addr);
+			System.out.println("socket = " + clientSocket);
+			Task t = new Task("", Integer.valueOf(duration));
+			CreateTask login = new CreateTask(this, t);
+			ObjectOutputStream oos = null;
+			ObjectInputStream ois = null;
+			// establish socket connection to server
+			// write to socket using ObjectOutputStream
+			oos = new ObjectOutputStream(clientSocket.getOutputStream());
+			oos.writeObject(login);
+			System.out.println("Sending request to Socket Server");
+
+			// read the server response message
+			ois = new ObjectInputStream(clientSocket.getInputStream());
+			AvailableTask tasks = (AvailableTask) ois.readObject();
+			showAvailableTasks(tasks);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	private boolean isInteger(String duration) {
+		try{
+			
+			Integer.getInteger(duration);
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
 	}
 
 	public void getTask(Task task2, int taskIndex) throws Exception {
@@ -191,7 +254,7 @@ public class Client implements Serializable {
 		InetAddress host = InetAddress.getLocalHost();
 		Thread.sleep(task2.getDuration());
 		clientSocket = new Socket(host.getHostName(), Constants.PORT);
-		CompleteTask complTask = new CompleteTask(task2, taskIndex,this);
+		CompleteTask complTask = new CompleteTask(task2, taskIndex, this);
 		ObjectOutputStream oos = null;
 		ObjectInputStream ois = null;
 		// establish socket connection to server
@@ -207,8 +270,8 @@ public class Client implements Serializable {
 		System.out.println("Working for task period...");
 		System.out.println("Message: " + tasks.getTasks());
 		// close resources
-		ois.close();
-		oos.close();
+//		ois.close();
+//		oos.close();
 	}
 
 }
