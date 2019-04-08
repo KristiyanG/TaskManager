@@ -73,10 +73,6 @@ public class Client implements Serializable {
 	private void listenForUpdate() throws IOException, ClassNotFoundException {
 		while (true) {
 			try {
-				InetAddress addr = InetAddress.getLocalHost();
-//			clientSocket = new Socket(addr.getHostName(), Constants.PORT);
-			System.out.println("addr = " + addr);
-			System.out.println("socket = " + clientSocket);
 			AvailableTask login = new AvailableTask(null, null);
 			login.setClientName(name);
 			ObjectOutputStream oos = null;
@@ -108,7 +104,7 @@ public class Client implements Serializable {
 			} while ((name == null) || (name.length() == 0));
 			InetAddress host = InetAddress.getLocalHost();
 			clientSocket = new Socket(host.getHostName(), Constants.PORT);
-			clientSocket.setKeepAlive(true);
+//			clientSocket.setKeepAlive(true);
 			InetAddress addr = InetAddress.getLocalHost();
 			System.out.println("addr = " + addr);
 			System.out.println("socket = " + clientSocket);

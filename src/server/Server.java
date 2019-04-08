@@ -48,7 +48,7 @@ public class Server {
 		while (true) {
 			System.out.println("Waiting for client request");
 			Socket socket = server.accept();
-			socket.setKeepAlive(true);
+//			socket.setKeepAlive(true);
 			// read from socket to ObjectInputStream object
 			clientRequest(socket);
 		}
@@ -67,7 +67,7 @@ public class Server {
 			serverTask.setStatus(Status.IN_PROGRESS);
 			System.out.println("Object Received: " + task.getTitle() + " from " + clientName);
 			// create ObjectOutputStream object
-//			updateClients(clientName);
+			updateClients(clientName);
 			returnAvailableTasks(socket);
 		} else if (action.getAction().equals(ActionType.COMPLETE_TASK)) {
 			CompleteTask complTask = (CompleteTask) action;
@@ -126,6 +126,9 @@ public class Server {
 	}
 
 	private static void returnAvailableTasks(Socket socket) throws IOException {
+		if(socket.isClosed()) {
+			return;
+		}
 		AvailableTask avTasks = new AvailableTask(new ArrayList<Task>(tasks),new ArrayList<String>(sockets.keySet()));
 		ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 		oos.writeObject(avTasks);		// close resources
