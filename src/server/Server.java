@@ -90,16 +90,12 @@ public class Server {
 			CreateTask login = (CreateTask) action;
 			System.out.println("Create task : " + login.getClientName());
 			addTask(login.getTask());
-			// create ObjectOutputStream object
-//				 write object to Socket
 			updateClients(clientName);
 			returnAvailableTasks(socket);
 		} else if (action.getAction().equals(ActionType.DELETE_TASK)) {
 			DeleteTask login = (DeleteTask) action;
 			System.out.println("Delete task : " + login.getClientName());
 			tasks.remove(login.getTaskIndex());
-			// create ObjectOutputStream object
-//				 write object to Socket
 			updateClients(clientName);
 			returnAvailableTasks(socket);
 		} else if (action.getAction().equals(ActionType.AVAILABLE_TASKS)) {
@@ -127,19 +123,21 @@ public class Server {
 
 	private static void returnAvailableTasks(Socket socket) throws IOException {
 		if(socket.isClosed()) {
+			System.err.println("Client socket is closed...");
 			return;
 		}
 		AvailableTask avTasks = new AvailableTask(new ArrayList<Task>(tasks),new ArrayList<String>(sockets.keySet()));
 		ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-		oos.writeObject(avTasks);		// close resources
+		oos.writeObject(avTasks);	
+		oos.flush();// close resources
 	}
 	
 	public static void updateClients(String clientName) {
 		for(java.util.Map.Entry<String, Socket> entry : sockets.entrySet()) {
-			if(entry.getKey().equals(clientName)) {
+			/*if(entry.getKey().equals(clientName)) {
 				System.out.println("Skip client update.." + clientName);
 				continue;
-			}
+			}*/
 			try {
 				returnAvailableTasks(entry.getValue());
 				System.out.println(entry.getKey() + " was updated.");

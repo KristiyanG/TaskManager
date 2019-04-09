@@ -52,6 +52,8 @@ public class Client implements Serializable {
 
 	private transient JPanel sp;
 
+	private transient List<Task> tasks;
+
 	public Client() {
 		InetAddress host;
 		try {
@@ -73,19 +75,28 @@ public class Client implements Serializable {
 	private void listenForUpdate() throws IOException, ClassNotFoundException {
 		while (true) {
 			try {
-			AvailableTask login = new AvailableTask(null, null);
-			login.setClientName(name);
-			ObjectOutputStream oos = null;
-			oos = new ObjectOutputStream(clientSocket.getOutputStream());
-			oos.writeObject(login);
-				
-				ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
-				Action action = (Action) ois.readObject();
+//				InetAddress host = InetAddress.getLocalHost();
+//				clientSocket = new Socket(host.getHostName(), Constants.PORT);
+//				clientSocket.setKeepAlive(true);
+				ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
+				AvailableTask login = new AvailableTask(null, null);
+				login.setClientName(name);
+				oos.writeObject(login);
+	
 				// if (action != null &&
 				// action.getAction().equals(ActionType.AVAILABLE_TASKS)) {
-				ois = new ObjectInputStream(clientSocket.getInputStream());
+				ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
 				AvailableTask tasks = (AvailableTask) ois.readObject();
 				System.out.println("Message: " + tasks.getTasks());
+				if(this.tasks.size() == tasks.getTasks().size()) {
+					try {
+						Thread.sleep(500);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					continue;
+				}
 				showAvailableTasks(tasks);
 				// }
 			} catch (StreamCorruptedException e) {
@@ -104,7 +115,7 @@ public class Client implements Serializable {
 			} while ((name == null) || (name.length() == 0));
 			InetAddress host = InetAddress.getLocalHost();
 			clientSocket = new Socket(host.getHostName(), Constants.PORT);
-//			clientSocket.setKeepAlive(true);
+			clientSocket.setKeepAlive(true);
 			InetAddress addr = InetAddress.getLocalHost();
 			System.out.println("addr = " + addr);
 			System.out.println("socket = " + clientSocket);
@@ -134,7 +145,7 @@ public class Client implements Serializable {
 			frame.repaint();
 		}
 		sp = new JPanel();
-		List<Task> tasks = avTasks.getTasks();
+		tasks = avTasks.getTasks();
 
 		String data[][] = new String[tasks.size()][];
 
@@ -163,6 +174,8 @@ public class Client implements Serializable {
 			public void actionPerformed(ActionEvent e) {
 				try {
 					getTask(tasks.get(jt.getSelectedRow()), jt.getSelectedRow());
+
+					completedTask(tasks.get(jt.getSelectedRow()), jt.getSelectedRow());
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -191,6 +204,7 @@ public class Client implements Serializable {
 			public void actionPerformed(ActionEvent e) {
 				try {
 					deleteTask(tasks.get(jt.getSelectedRow()), jt.getSelectedRow());
+					// close resources
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -207,7 +221,8 @@ public class Client implements Serializable {
 	protected void deleteTask(Task task, int taskIndex) throws IOException, ClassNotFoundException {
 
 		InetAddress host = InetAddress.getLocalHost();
-		clientSocket = new Socket(host.getHostName(), Constants.PORT);
+		Socket clientSocket = new Socket(host.getHostName(), Constants.PORT);
+		clientSocket.setKeepAlive(true);
 		DeleteTask getTaskAction = new DeleteTask(task,this);
 		getTaskAction.setTaskIndex(taskIndex);
 		ObjectOutputStream oos = null;
@@ -231,7 +246,8 @@ public class Client implements Serializable {
 		} while ((duration == null) || (!isInteger(duration)));
 		try {
 			InetAddress addr = InetAddress.getLocalHost();
-			clientSocket = new Socket(addr.getHostName(), Constants.PORT);
+			Socket clientSocket = new Socket(addr.getHostName(), Constants.PORT);
+			clientSocket.setKeepAlive(true);
 			System.out.println("addr = " + addr);
 			System.out.println("socket = " + clientSocket);
 			Task t = new Task("", Integer.valueOf(duration));
@@ -268,7 +284,7 @@ public class Client implements Serializable {
 	public void getTask(Task task2, int taskIndex) throws Exception {
 
 		InetAddress host = InetAddress.getLocalHost();
-		clientSocket = new Socket(host.getHostName(), Constants.PORT);
+		Socket clientSocket = new Socket(host.getHostName(), Constants.PORT);
 		GetTask getTaskAction = new GetTask(this);
 		getTaskAction.setTask(task2);
 		getTaskAction.setTaskIndex(taskIndex);
@@ -284,22 +300,22 @@ public class Client implements Serializable {
 		ois = new ObjectInputStream(clientSocket.getInputStream());
 		AvailableTask tasks = (AvailableTask) ois.readObject();
 		System.out.println("Working for task period...");
-		Thread.sleep(task2.getDuration());
 		System.out.println("Message: " + tasks.getTasks());
-		// close resources
-		completedTask(task2, taskIndex);
+//		showAvailableTasks(tasks);
 	}
 
 	private void completedTask(Task task2, int taskIndex) throws Exception {
 
 		InetAddress host = InetAddress.getLocalHost();
 		Thread.sleep(task2.getDuration());
-		clientSocket = new Socket(host.getHostName(), Constants.PORT);
+		Socket clientSocket = new Socket(host.getHostName(), Constants.PORT);
 		CompleteTask complTask = new CompleteTask(task2, taskIndex, this);
 		ObjectOutputStream oos = null;
 		ObjectInputStream ois = null;
 		// establish socket connection to server
 		// write to socket using ObjectOutputStream
+
+		Thread.sleep(task2.getDuration());
 		oos = new ObjectOutputStream(clientSocket.getOutputStream());
 		oos.writeObject(complTask);
 		System.out.println("Sending request to Socket Server");
@@ -310,6 +326,8 @@ public class Client implements Serializable {
 		showAvailableTasks(tasks);
 		System.out.println("Working for task period...");
 		System.out.println("Message: " + tasks.getTasks());
+
+		showAvailableTasks(tasks);
 		// close resources
 //		ois.close();
 //		oos.close();
