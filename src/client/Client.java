@@ -1,5 +1,10 @@
 package client;
 
+
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.GridLayout;
+import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
@@ -28,6 +33,7 @@ import core.action.GetTask;
 import core.action.Login;
 import core.action.Task;
 import core.action.Constants.ActionType;
+import core.action.Constants.Status;
 import core.action.CreateTask;
 import core.action.DeleteTask;
 
@@ -53,6 +59,8 @@ public class Client implements Serializable {
 	private transient JPanel sp;
 
 	private transient List<Task> tasks;
+	
+	private int completedTask = 0;
 
 	public Client() {
 		InetAddress host;
@@ -88,15 +96,15 @@ public class Client implements Serializable {
 				ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
 				AvailableTask tasks = (AvailableTask) ois.readObject();
 				System.out.println("Message: " + tasks.getTasks());
-				if(this.tasks.size() == tasks.getTasks().size()) {
-					try {
-						Thread.sleep(500);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					continue;
-				}
+//				if(this.tasks.size() == tasks.getTasks().size()) {
+//					try {
+//						Thread.sleep(500);
+//					} catch (InterruptedException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//					continue;
+//				}
 				showAvailableTasks(tasks);
 				// }
 			} catch (StreamCorruptedException e) {
@@ -145,6 +153,7 @@ public class Client implements Serializable {
 			frame.repaint();
 		}
 		sp = new JPanel();
+		sp.removeAll();
 		tasks = avTasks.getTasks();
 
 		String data[][] = new String[tasks.size()][];
@@ -161,8 +170,9 @@ public class Client implements Serializable {
 		jt.repaint();
 		jt.setBounds(30, 40, 200, 300);
 		JLabel jl = new JLabel("User:" + this.getName());
+		JLabel completedTasks = new JLabel("Completed tasks :" + this.completedTask);
+		completedTasks.setHorizontalAlignment(2);
 		JLabel avUsersLabel = new JLabel("Available user:" + avTasks.getClients().size());
-		sp.removeAll();
 		sp.add(jl);
 		sp.add(jt);
 		sp.add(avUsersLabel);
@@ -173,6 +183,10 @@ public class Client implements Serializable {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
+					if(tasks.get(jt.getSelectedRow()).getStatus().equals(Status.IN_PROGRESS)) {
+						System.err.println("This task is already in progress...");
+						return;
+					}
 					getTask(tasks.get(jt.getSelectedRow()), jt.getSelectedRow());
 
 					completedTask(tasks.get(jt.getSelectedRow()), jt.getSelectedRow());
@@ -191,7 +205,6 @@ public class Client implements Serializable {
 				try {
 					createTask();
 				} catch (Exception e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 
@@ -203,15 +216,17 @@ public class Client implements Serializable {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
+					if(tasks.size() < jt.getSelectedRow()) {
+						return;
+					}
 					deleteTask(tasks.get(jt.getSelectedRow()), jt.getSelectedRow());
-					// close resources
 				} catch (Exception e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 
 			}
 		});
+		sp.add(completedTasks);
 		frame.add(sp);
 		frame.setSize(300, 400);
 		frame.setVisible(true);
@@ -227,16 +242,13 @@ public class Client implements Serializable {
 		getTaskAction.setTaskIndex(taskIndex);
 		ObjectOutputStream oos = null;
 		ObjectInputStream ois = null;
-		// establish socket connection to server
-		// write to socket using ObjectOutputStream
 		oos = new ObjectOutputStream(clientSocket.getOutputStream());
 		oos.writeObject(getTaskAction);
 		System.out.println("Sending request to Socket Server");
 
-		// read the server response message
-		ois = new ObjectInputStream(clientSocket.getInputStream());
-		AvailableTask tasks = (AvailableTask) ois.readObject();
-		showAvailableTasks(tasks);
+//		ois = new ObjectInputStream(clientSocket.getInputStream());
+//		AvailableTask tasks = (AvailableTask) ois.readObject();
+//		showAvailableTasks(tasks);
 	}
 
 	protected void createTask() {
@@ -249,21 +261,20 @@ public class Client implements Serializable {
 			Socket clientSocket = new Socket(addr.getHostName(), Constants.PORT);
 			clientSocket.setKeepAlive(true);
 			System.out.println("addr = " + addr);
+			System.out.println("Inget " + isInteger(duration));
 			System.out.println("socket = " + clientSocket);
 			Task t = new Task("", Integer.valueOf(duration));
 			CreateTask login = new CreateTask(this, t);
 			ObjectOutputStream oos = null;
 			ObjectInputStream ois = null;
-			// establish socket connection to server
-			// write to socket using ObjectOutputStream
 			oos = new ObjectOutputStream(clientSocket.getOutputStream());
 			oos.writeObject(login);
 			System.out.println("Sending request to Socket Server");
 
 			// read the server response message
-			ois = new ObjectInputStream(clientSocket.getInputStream());
-			AvailableTask tasks = (AvailableTask) ois.readObject();
-			showAvailableTasks(tasks);
+//			ois = new ObjectInputStream(clientSocket.getInputStream());
+//			AvailableTask tasks = (AvailableTask) ois.readObject();
+//			showAvailableTasks(tasks);
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -272,9 +283,8 @@ public class Client implements Serializable {
 	}
 
 	private boolean isInteger(String duration) {
-		try{
-			
-			Integer.getInteger(duration);
+		try{			
+			Integer.valueOf(duration);
 		} catch (Exception e) {
 			return false;
 		}
@@ -297,11 +307,10 @@ public class Client implements Serializable {
 		System.out.println("Sending request to Socket Server");
 
 		// read the server response message
-		ois = new ObjectInputStream(clientSocket.getInputStream());
-		AvailableTask tasks = (AvailableTask) ois.readObject();
-		System.out.println("Working for task period...");
-		System.out.println("Message: " + tasks.getTasks());
-//		showAvailableTasks(tasks);
+//		ois = new ObjectInputStream(clientSocket.getInputStream());
+//		AvailableTask tasks = (AvailableTask) ois.readObject();
+//		System.out.println("Working for task period...");
+//		System.out.println("Message: " + tasks.getTasks());
 	}
 
 	private void completedTask(Task task2, int taskIndex) throws Exception {
@@ -321,13 +330,14 @@ public class Client implements Serializable {
 		System.out.println("Sending request to Socket Server");
 
 		// read the server response message
-		ois = new ObjectInputStream(clientSocket.getInputStream());
-		AvailableTask tasks = (AvailableTask) ois.readObject();
-		showAvailableTasks(tasks);
-		System.out.println("Working for task period...");
-		System.out.println("Message: " + tasks.getTasks());
+//		ois = new ObjectInputStream(clientSocket.getInputStream());
+//		AvailableTask tasks = (AvailableTask) ois.readObject();
+//		showAvailableTasks(tasks);
+//		System.out.println("Working for task period...");
+//		System.out.println("Message: " + tasks.getTasks());
 
-		showAvailableTasks(tasks);
+		completedTask++;
+//		showAvailableTasks(tasks);
 		// close resources
 //		ois.close();
 //		oos.close();

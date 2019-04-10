@@ -59,7 +59,9 @@ public class Server {
 		Action action = (Action) ois.readObject();
 		String clientName = action.getClientName();
 		System.out.println("Client request - " + clientName);
-		sockets.put(clientName, socket);
+		if(sockets.get(clientName) == null) {
+			sockets.put(clientName, socket);
+		}
 		if (action.getAction().equals(ActionType.GET_TASK)) {
 			GetTask getTask = (GetTask) action;
 			Task task = ((GetTask) action).getTask();
